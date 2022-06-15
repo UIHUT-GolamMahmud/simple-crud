@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
-use Carbon\Carbon;
+use App\Http\Requests\CategoryStoreRequest;
+use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Contracts\View\Factory;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 use Image;
 
@@ -13,9 +17,9 @@ class CategoryController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return View
      */
-    public function index()
+    public function index(): View
     {
         $categories = Category::all();
         return view('category.index',compact('categories'));
@@ -24,9 +28,9 @@ class CategoryController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return View
      */
-    public function create()
+    public function create(): view
     {
         return view('category.create');
     }
@@ -37,43 +41,43 @@ class CategoryController extends Controller
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function store(Request $request)
+
+    public function imageUpload(Request $request)
     {
-
-        $request->validate ([
-           'category_name' => 'required',
-           'category_description' => 'required',
-           'file' => 'required'
-        ]);
-
         $image = $request->file('file');
+        $categoryImage = Image::make($image)->resize(1600,1086)->save($image);
+        Storage::disk('public')->put('category/'.$image,$categoryImage);
 
-        if (isset($image)){
-            $imageName = uniqid().'.'.$image->getClientOriginalExtension();
-            if (!Storage::disk('public')->exists('category')){
-                Storage::disk('public')->makeDirectory('category');
-            }
-            $categoryImage = Image::make($image)->resize(1600,1086)->save($imageName);
-            Storage::disk('public')->put('category/'.$imageName,$categoryImage);
-        }else{
-            $imageName = 'default.png';
+    }
+
+    public function store(CategoryStoreRequest $request)
+    {
+        $data  = $request->validated();
+        if ($data){
+            return $this->imageUpload($request);
+            Category::create($data);
+            return redirect()->back();
         }
 
 
-        $category = new Category();
-        $category->category_name = $request->category_name;
-        $category->category_description = $request->category_description;
-        $category->file = $imageName;
-        $category->save();
 
-        return redirect()->back();
+
+//        if ($validated){
+//            $category = new Category();
+//            $category->category_name = $request->category_name;
+//            $category->category_description = $request->category_description;
+//            $category->file = $this->imageUpload();
+//            $category->save();
+//
+//            return redirect()->back();
+//        }
     }
 
     /**
      * Display the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function show($id)
     {
@@ -84,9 +88,9 @@ class CategoryController extends Controller
      * Show the form for editing the specified resource.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return View
      */
-    public function edit($id)
+    public function edit($id) : View
     {
         $category = Category::find($id);
         return view('category.edit',compact('category'));
@@ -97,7 +101,7 @@ class CategoryController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(Request $request, $id)
     {
@@ -107,23 +111,10 @@ class CategoryController extends Controller
             'file' => 'required'
         ]);
 
-        $image = $request->file('file');
-        if (isset($image)){
-            $imageName = uniqid().'.'.$image->getClientOriginalExtension();
-            if (!Storage::disk('public')->exists('category')){
-                Storage::disk('public')->makeDirectory('category');
-            }
-            $categoryImage = Image::make($image)->resize(1600,1086)->save($imageName);
-            Storage::disk('public')->put('category/'.$imageName,$categoryImage);
-        }else{
-            $imageName = 'default.png';
-        }
-
-
         $category = Category::find($id);
         $category->category_name = $request->category_name;
         $category->category_description = $request->category_description;
-        $category->file = $imageName;
+        $category->file = $this->imageUpload->imageName;
         $category->save();
 
         return redirect()->back();
@@ -133,7 +124,7 @@ class CategoryController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy($id)
     {
