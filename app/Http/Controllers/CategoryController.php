@@ -42,35 +42,25 @@ class CategoryController extends Controller
      * @return \Illuminate\Http\RedirectResponse
      */
 
-    public function imageUpload(Request $request)
-    {
-        $image = $request->file('file');
-        $categoryImage = Image::make($image)->resize(1600,1086)->save($image);
-        Storage::disk('public')->put('category/'.$image,$categoryImage);
-
-    }
 
     public function store(CategoryStoreRequest $request)
     {
-        $data  = $request->validated();
-        if ($data){
-            return $this->imageUpload($request);
-            Category::create($data);
-            return redirect()->back();
+//        $data  = $request->validated();
+//        Category::create($data);
+
+        $category = new Category();
+        $category->category_name = $request->category_name;
+        $category->category_description = $request->category_description;
+        $image = $request->file('file');
+        if ($image){
+            $imageName = uniqid().'.'.$image->getClientOriginalExtension();
+            $categoryImage = Image::make($image)->resize(1600,1086)->save($imageName);
+            Storage::disk('public')->put('category/'.$imageName,$categoryImage);
         }
+        $category->file = $imageName;
+        $category->save();
 
-
-
-
-//        if ($validated){
-//            $category = new Category();
-//            $category->category_name = $request->category_name;
-//            $category->category_description = $request->category_description;
-//            $category->file = $this->imageUpload();
-//            $category->save();
-//
-//            return redirect()->back();
-//        }
+        return redirect()->back();
     }
 
     /**
@@ -101,7 +91,7 @@ class CategoryController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @param  int  $id
-     * @return Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(Request $request, $id)
     {
@@ -114,7 +104,7 @@ class CategoryController extends Controller
         $category = Category::find($id);
         $category->category_name = $request->category_name;
         $category->category_description = $request->category_description;
-        $category->file = $this->imageUpload->imageName;
+        $category->file = $this->imageUpload($request);
         $category->save();
 
         return redirect()->back();
@@ -124,7 +114,7 @@ class CategoryController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return Response
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy($id)
     {
